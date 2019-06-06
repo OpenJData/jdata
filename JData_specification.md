@@ -2,9 +2,9 @@
 ============================================================
 
 - **Status of this document**: This document is current under development.
-- **Copyright**: (C) Qianqian Fang (2015, 2019) <q.fang at neu.edu>
+- **Copyright**: (C) Qianqian Fang (2011, 2015, 2019) <q.fang at neu.edu>
 - **License**: Apache License, Version 2.0
-- **Version**: 0.5
+- **Version**: 0.6 (Draft 1)
 - **Abstract**:
 
 > JData is a general-purpose data interchange format aimed for portability,
@@ -13,7 +13,7 @@ readability and simplicity. It utilizes the JavaScript Object Notation
 store complex hierarchical data in both text and binary formats. In this 
 specification, we define a list of JSON-compatible constructs to store
 a wide range of data structures, including scalars, arrays, structures, 
-tables, hashes, linked lists, trees and graphs, including optional data
+tables, hashes, linked lists, trees and graphs, and support for optional data
 grouping and metadata for each data element. The generated data files are 
 compatible with JSON/UBJSON specifications and can be readily processed by 
 most existing parsers. Advanced features such as array compression, data 
@@ -49,11 +49,12 @@ scalability of the generated data files.
             - [Sparse arrays](#sparse-arrays)
             - [Sparse complex-valued arrays](#sparse-complex-valued-arrays)
             - [Compressed array storage format](#compressed-array-storage-format)
-        + [Associative or hashed arrays](#associative-or-hashed-arrays)
+        + [Associative arrays or maps](#associative-arrays-or-maps)
         + [Tables](#tables)
         + [Trees](#trees)
         + [Singly and doubly linked lists](#singly-and-doubly-linked-lists)
         + [Directed and undirected graphs](#directed-and-undirected-graphs)
+        + [Generic byte-stream data](#generic-byte-stream-data)
 - [Indexing and Accessing JData](#indexing-and-accessing-jdata)
     * [Index vector](#index-vector)
     * [Data query](#data-query)
@@ -215,23 +216,24 @@ separated by 0 or multiple permitted white spaces, namely
 
 ### Binary JData Storage Grammar
 
-The binary JData grammar is identical to the UBJSON grammar defined in 
-[ubjson.org (Draft 12)](http://ubjson.org), with the following two exceptions
+The binary JData grammar is identical to the UBJSON grammar defined in the
+[UBJSON Specification (Draft 12)](http://ubjson.org), with the following three exceptions
 
-1. JData does not support `[N]` (`"no-op"`) record, and
-2. optimized array container header was extended to support N-dimensional dense arrays:
+1. JData stores an `[N]` (`"no-op"`) record as `null` when saving the data in the text-format,
+2. JData uses IEEE 754 binary form to store +/-Infinity, instead of converting to [Z], and
+3. optimized array container header was extended to support N-dimensional dense arrays:
 ```
-[[] [$] [type] [#] [[] [$] [nx type] [#] [ndim type] [ndim] [nx ny nz ...] []] [nx*ny*nz*...*sizeof(type)] []]
+[[] [$] [type] [#] [[] [$] [nx type] [#] [ndim type] [ndim] [nx ny nz ...] [nx*ny*nz*...*sizeof(type)]
 ```
    or
 ```
-[[] [$] [type] [#] [[] [nx type] [nx] [ny type] [ny] [nz type] [nz] ... []] [nx*ny*nz*...*sizeof(type) ] []]
+[[] [$] [type] [#] [[] [nx type] [nx] [ny type] [ny] [nz type] [nz] ... []] [nx*ny*nz*...*sizeof(type) ]
 ```
 where `ndim` is the number of dimensions, and `nx`, `ny`, and `nz` ... are 
 all non-negative numbers specifying the dimensions of the N-dimensional array,
 `nz/ny/nz/ndim` types must be one of the UBJSON integer types (`i,U,I,l,L`), . 
-The binary data of the N-dimensional array is then serialized in the **column-major** format 
-(similar to MATLAB or FORTRAN) order.
+The binary data of the N-dimensional array is then serialized in the **row-major** format 
+(similar to C, C++, Javascript or Python) order.
 
 As a special note, all UBJSON integer types must be stored in the Big-Endian 
 format, according to the specification; the storage to the floating point types 
@@ -341,10 +343,12 @@ Below is a short summary of the JData data annotation/storage keywords to be int
 * **N-D Array**: `_ArrayType_`, `_ArraySize_`, `_ArrayIsComplex_`, 
   `_ArrayIsSparse_`,`_ArrayData_`,`_ArrayCompressionMethod_`,`_ArrayCompressionSize_`, 
   `_ArrayCompressionEndian_`, `_ArrayCompressedData_`
-* **Tree**: `_TreeNode_`,`_TreeChildren_`,`_TreeData_`
-* **Linked List**: `_ListNode_`,`_ListNext_`,`_ListPrior_`,`_LinkedList_`
-* **Graph**: `_GraphNodes_`,`_GraphEdges_`,`_GraphMatrix_`,`_GraphData_`
+* **Hash/Map**: `_MapData_`
 * **Table**: `_TableData_`
+* **Tree**: `_TreeData_`,`_TreeNode_`,`_TreeChildren_`
+* **Linked List**: `_ListNode_`,`_ListNext_`,`_ListPrior_`,`_LinkedList_`
+* **Graph**: `_GraphData_`,`_GraphNodes_`,`_GraphEdges_`,`_GraphMatrix_`
+* **Byte-stream**: `_ByteStream_`
 * **Inline metadata**: `"item_name::Property1=value1,Property2=value2,...": ...`
 * **Metadata record**: `{"_DataInfo_":{...}}`
 * **Data links and anchors**: `_DataLink_`, `_DataAnchor_`
@@ -525,14 +529,14 @@ The following constants are supported by this version of the specification
   can be omitted); in the binary JData, they should be stored in the IEEE 754 format
 * logical `true`/`false`: A logical `true`/`false` should be represented by the JSON `true/false` 
   logical values, or `[T]`/`[F]` markers in UBJSON
-* `Null`: a `Null` (empty) value can be stored as `null` in JSON and `[Z]` in UBJSON
+* `Null`: a `Null` (empty) value shall be stored as `null` in JSON and `[Z]` in UBJSON
 
 
 #### N-Dimensional Array Storage Keywords
 
-An N-dimensional array is serialized using the column-major format (i.e. the fastest index
-is the left-most index, similar to arrays in MATLAB and FORTRAN; in comparison, C arrays
-are row-majored).
+An N-dimensional array is serialized using the **row-major** format (i.e. the fastest index
+is the right-most index, similar to arrays in C, C++ or Python; in comparison, MATLAB and 
+FORTRAN arrays are column-majored).
 
 A solid (non-sparse) N-dimensional array can be represented in two forms in JData - the 
 direct storage format and the annotated storage format.
@@ -540,18 +544,18 @@ direct storage format and the annotated storage format.
 ##### Direct storage of N-D arrays
 
 A solid N-D array can be stored directly using JSON/UBJSON nested array constructs. For example, 
-a 1-D column vector can be stored as
+a 1-D row vector shall be stored as
 
 `[1,2,11,9,2.1,10,...]`
 
-while a 1-D row-vector can be stored as
+while a 1-D column-vector shall be stored as
 
 ```
 [[1],[2],[11],[9],[2.1],[10],...]
 ```
 in the JSON-formatted JData.
 
-Below is an example of a 4x3x2 3-D array stored in JSON-formatted JData:
+Below is an example of a 2x3x4 3-D array stored in JSON-formatted JData:
 
 ```
   [
@@ -592,10 +596,10 @@ The annotated array format is shown below for a solid 2x3 array `a=[[1,2],[3,4],
 Here, the array annotation keywords are defined below:
 
 * **`"_ArrayType_"`**: (required) a case-insensitive string value to specify the type of the data, see below
-* **`"_ArraySize_"`**: (required) an integer-valued (see below) 1-D column vector, storing the dimensions 
+* **`"_ArraySize_"`**: (required) an integer-valued (see below) 1-D row vector, storing the dimensions 
   of the N-D array
-* **`"_ArrayData_"`**: (required) a 1-D column vector storing the serialized array values, using the 
-  column-major element order
+* **`"_ArrayData_"`**: (required) a 1-D row vector storing the serialized array values, using the 
+  **row-major** element order
 
 To facilitate the pre-allocation of the buffer for storage of the array in the parser, 
 it is required that the `"_ArrayType_"` and `"_ArraySize_"` nodes must appear before 
@@ -621,19 +625,20 @@ The first 8 data types are considered "integer" types, and the last two types ar
 ##### Complex-valued arrays
 
 JData supports the storage of complex values or arrays using only the annotated N-D array storage
-format. In this case, a named node `"_ArrayIsComplex_":true` or `"_ArrayIsComplex_":1` 
-is added into the structure. In the meantime, the `"_ArrayData_"` becomes the concatenation of the
-serialized real and imaginary parts of the complex array, with the real-part in the first half, and
-the imaginary-part in the 2nd half.
+format. In this case, a named node `"_ArrayIsComplex_":true` must be added into the 
+structure. In the meantime, `"_ArrayData_"` shall be defined as a 2-D array by concatenating the
+serialized real and imaginary parts of the complex array as row vectors, with the real-part 
+as the first row vector, and the imaginary-part in the 2nd row vector. The two row 
+vectors must have the same length.
 
-For example, a complex double-precision 1x3 row vector `a=[2+6*i, 4+3.2*i,  1.2+9.7*i]` can be stored as
+For example, a complex double-precision 1x3 row vector `a=[2+6*i, 4+3.2*i,  1.2+9.7*i]` shall be stored as
 
 ```
    {
        "_ArrayType_": "double",
        "_ArraySize_": [1, 3],
        "_ArrayIsComplex_": true,
-       "_ArrayData_": [2,4,1.2,6,3.2,9.7]
+       "_ArrayData_": [[2, 4, 1.2], [6, 3.2, 9.7]]
    }
 ```
 
@@ -642,14 +647,15 @@ The `"_ArrayIsComplex_"` node must be presented before `"_ArrayData_"`.
 ##### Sparse arrays
 
 JData also supports the storage of N-D sparse arrays using the annotated N-D array storage
-format. In this case, a named node `"_ArrayIsSparse_":true` or `"_ArrayIsSparse_":1` 
-is added into the structure. In the meantime, the "_ArrayData_" becomes the concatenations 
-of the serialized N-tuple integer indices, followed by the non-zero array element values. 
-For an N-D sparse array, each non-zero value requires an N-tuple index to specify its 
-location.
+format. In this case, a named node `"_ArrayIsSparse_":true` must be added into 
+the structure. In the meantime, the `"_ArrayData_"` shall be defined as a 2-D array by 
+concatenating the N-tuple integer indices (left-most index first, and so on), each as a
+row vector, followed by the row vector of the serialized non-zero array element 
+values. For an N-D sparse array, each non-zero value requires an N-tuple index to specify 
+its location.
 
 For example, if a 3-D sparse array has the following non-zero element at the specified 
-locations by a triplets `[i1, i2, i3]`:
+locations by a triplet `(i1, i2, i3)`:
 ```
   a: i1, i2, i3, value
       2   3   1   10.1
@@ -659,13 +665,13 @@ locations by a triplets `[i1, i2, i3]`:
       5   2   2   9.4
       2   2   3   20.5
 ```
-it can be saved as the following JSON format
+it shall be stored in the following JSON format
 ```
    {
        "_ArrayType_": "double",
        "_ArraySize_": [5, 4, 3],
        "_ArrayIsSparse_": true,
-       "_ArrayData_": [2,3,3,5,5,2, 3,1,3,1,2,2, 1,1,1,2,2,3, 10.1,9.0,8.1,17,9.4,20.5]
+       "_ArrayData_": [[2,3,3,5,5,2], [3,1,3,1,2,2], [1,1,1,2,2,3], [10.1,9.0,8.1,17,9.4,20.5]]
    }
 ```
 The `"_ArrayIsSparse_"` node must be presented before `"_ArrayData_"`.
@@ -674,10 +680,11 @@ The `"_ArrayIsSparse_"` node must be presented before `"_ArrayData_"`.
 
 Using the combination of `"_ArrayIsComplex_"` and `"_ArrayIsSparse_"`, one can store
 a complex-valued sparse array using JData. In this case, both `"_ArrayIsComplex_":true` 
-and `"_ArrayIsSparse_":true` shall be presented in the structure, with `"_ArrayData_"` 
-ordered by serialized non-zero element indices (left-most index first, and so on), followed
-by the serialized real-values of the non-zero elements, and lastly the imaginary-values of 
-the non-zero elements.
+and `"_ArrayIsSparse_":true` must be presented in the structure, with `"_ArrayData_"` 
+ordered by the N-tuple non-zero element indices (left-most index first, and so on), 
+each as a row vector, followed by a row vector for the real-values of the non-zero elements, and 
+lastly the row vector for the imaginary-values of the non-zero elements. All row vectors
+of `"_ArrayData_"` must have the same length.
 
 For example, if a 3-D sparse array has the following non-zero complex element at the 
 specified indices `(i1, i2, i3)`
@@ -687,14 +694,14 @@ specified indices `(i1, i2, i3)`
       3   1   1   9.0+11*i
       3   3   2   8.1+8.2*i
 ```
-it can be saved as the following JSON format
+it shall be stored in the following JSON format
 ```
    {
        "_ArrayType_": "double",
        "_ArraySize_": [4, 3, 2],
        "_ArrayIsComplex_": true,
        "_ArrayIsSparse_": true,
-       "_ArrayData_": [2,3,3, 3,1,3, 1,1,2, 10.1,9.0,8.1, 19.0,11,8.2]
+       "_ArrayData_": [[2,3,3], [3,1,3], [1,1,2], [10.1,9.0,8.1], [19.0,11,8.2]]
    }
 ```
 or the corresponding UBJSON equivalents.
@@ -706,43 +713,62 @@ files. Compressed data format is only supported in the annotated array storage f
 
 Four additional nodes are added to the annotated array structure
 
-* **`_ArrayCompressionMethod_`**: a string-valued leaflet to store the compression 
+* **`_ArrayCompressionMethod_`**: (required) a string-valued leaflet to store the compression 
   method, for example, "zlib", "gzip" or "lzma"
-* **`_ArrayCompressionSize_`**: the dimensions of the pre-processed array, i.e. the data
+* **`_ArrayCompressionSize_`**: (required) the dimensions of the pre-processed array, i.e. the data
   originally stored in `_ArrayData_` in the format specified by `"_ArrayType_"`, 
   before the array binary stream type-casted to byte stream and compression.
-* **`_ArrayCompressionEndian_`**: a case-insensitive string, either "little" or "big",
-  indicating the endianness of the byte-stream before compression; if missing, assume
-  to be "little"
-* **`_ArrayCompressedData_`**: in addition, the `"_ArrayData_"` node is replaced by 
+* **`_ArrayCompressedData_`**: (required) in addition, the `"_ArrayData_"` node is replaced by 
   `"_ArrayCompressedData_"`. In the case of JSON-formatted JData files, 
   `"_ArrayCompressedData_"` has a string value storing the "Base64" encoded compressed 
   byte-stream of the pre-processed array. In the case of UBJSON flavored JData, 
   `"_ArrayCompressedData_"` directly stores the compressed byte stream of the 
   pre-processed array without "Base64" encoding.
 
+In addition, the following optional parameters may also be used
+
+* **`_ArrayCompressionEndian_`**: (optional) a case-insensitive string, either "little" or "big",
+  indicating the endianness of the byte-stream before compression; if missing, assume
+  to be "little"
+* **`_ArrayCompressionLevel_`**: (optional) a numerical value, typically an integer between
+  0 and 9, specifying the level of the compression (interpretation is method/library-dependent)
+* **`_ArrayCompressionOptions_`**: (optional) an array object allowing users to specify
+  additional compression-method specific parameters (interpretation is method/library-dependent)
+
 When a compressed array format is used, `"_ArrayCompressionMethod_"` and 
 `"_ArrayCompressionSize_"` must appear before `"_ArrayCompressedData_"`.
 
 
-#### Associative or hashed arrays
+#### Associative arrays or maps
 
-In an associative array or hashed array, the element can be accessed using a string-valued
+In a map or an associative/hashed array, the element can be accessed using a unique
 key. For example, the below pseudo code defines a 3-element associative array `@a` with
 3 unique keys
 ```
-   @a = {'Mike'->21, 'Julia'->25, 'Steve'->26}
+   @a = {'Andy'->21, 'William'->21, 'Om'->22}
 ```
 Such data structure can be conveniently represented using JSON/UBJSON as
 ```
    {
-       "Mike":  21,
-       "Julia": 25,
-       "Steve": 26
+       "Andy":    21,
+       "William": 21,
+       "Om":      22
    }
 ```
-In an associative array, the keys are supposed to be unique. Only string-keyed associative 
-arrays are supported in JData.
+
+To store maps with non-string valued keys, one can use a 2-D array enclosed inside 
+a `"_MapData_"` construct, for example
+```
+   "_MapData_": [
+       ["Andy",   21],
+       ["William",21],
+       ["Om",     22],
+       [120, 30],
+       [2.9, 45]
+   ]
+```
+Each element of the `_MapData_` array may contain more than 2 elements; the additional 
+elements shall be treated as auxiliary data.
 
 #### Tables
 
@@ -750,11 +776,11 @@ A table data structure is defined by a 2-dimensional grid of data indexed by the
 columns (fields) and rows (records). For example
 
 ```
-  Name   Age   Degree  Height
-  ----  ------ ------  ------
-  Mike   21     BS      71.2
-  Julia  25     MS      67.0
-  Steve  26     BE      69.1
+  Name    Age   Degree  Height
+  ----  ------- ------  ------
+  Andy    21     BS      69.2
+  William 21     MS      71.0
+  Om      22     BE      67.1
 ```
 Such data can also be stored in JSON/UBJSON in two forms: 
 
@@ -762,9 +788,9 @@ Such data can also be stored in JSON/UBJSON in two forms:
 
 ```
    [
-       {"Name": "Mike",  "Age": 21, "Degree": "BS", "Height": 71.2},
-       {"Name": "Julia", "Age": 25, "Degree": "MS", "Height": 67.0},
-       {"Name": "Steve", "Age": 26, "Degree": "BE", "Height": 69.1},
+       {"Name": "Andy",   "Age": 21, "Degree": "BS", "Height": 69.2},
+       {"Name": "William","Age": 21, "Degree": "MS", "Height": 71.0},
+       {"Name": "Om",     "Age": 22, "Degree": "BE", "Height": 67.1}
    ]
 ```
 
@@ -773,10 +799,10 @@ Such data can also be stored in JSON/UBJSON in two forms:
   JData form
 ```
    {
-       "Name":   ["Mike","Julia","Steve"],
-       "Age":    [21,25,26],
+       "Name":   ["Andy","William","Om"],
+       "Age":    [21,21,22],
        "Degree": ["BS","MS","BE"],
-       "Height": [71.2,67.0,69.1]
+       "Height": [69.2,71.0,67.1]
    }
 ```
 
@@ -831,7 +857,7 @@ can be represented by the below JSON structure
                  {"_TreeNode_(node2.2): data2.2}
              ]
          },
-         {"_TreeNode_(node3)": data3},
+         {"_TreeNode_(node3)": data3}
      ]
   }
 ```
@@ -853,7 +879,7 @@ about the tree nodes, for example
                  {"_TreeNode_(node2.2)::NodeID=5,ParentID=3": data2.2}
              ]
          },
-         {"_TreeNode_(node3)::NodeID=6,ParentID=1": data3},
+         {"_TreeNode_(node3)::NodeID=6,ParentID=1": data3}
      ]
   }
 ```
@@ -957,7 +983,8 @@ we can then store this data structure as
     }
 ```
 The data associated with each edge (edgedata) in this example is optional and can be any JData 
-structure supported in this document.
+structure supported in this document. If the edge data is a scalar, it can be interpreted as 
+weights in a weighted graph.
 
 By default, the graph is assumed to be a directed graph. If a user intends to store undirected 
 graph using the above format, one must use `"_GraphEdges_(false)"` or `"_GraphEdges_(0)"` to 
@@ -993,14 +1020,14 @@ we can write this matrix using direct form
               "node3": data3
         },
         "_GraphMatrix_":[
-          [0,0,0,0],
-          [1,0,0,0],
-          [0,1,0,1],
-          [0,1,1,0]
+          [0,1,0,0],
+          [0,0,1,1],
+          [0,0,0,1],
+          [0,0,1,0]
         ]
     }
 ```
-Notice that the matrix is serialized in the column-major order in the above example. Alternatively, one
+Notice that the matrix is serialized in the **row-major** order in the above example. Alternatively, one
 can also use the annotated array format to take advantage of the sparsity of the data:
 ```
     {
@@ -1032,8 +1059,39 @@ One can also apply array compression, as explained above, to further reduce the 
 	}
   }
 ```
-here the `"_ArrayCompressedData_"` stores the column-major-serialized, byte-typecasted,
+here the `"_ArrayCompressedData_"` stores the row-major-serialized, byte-typecasted,
 zlib-compressed and finally base64-encoded adjacency matrix.
+
+In addition, a weighted graph can also be stored using the adjacency matrix by replacing
+the "1"s in the matrix by the weight value (a numerical scalar).
+
+
+#### Generic byte-stream data
+
+A binary byte-stream of arbitrary length can be stored in the text-based JData using the below construct
+
+`"_ByteStream_":"..."`
+
+where the string value `"..."` shall be the Base64-encoded byte-stream binary data. For example, a string
+valued byte-stream `"JData specification"` shall be stored as
+
+`"_ByteStream_":"SkRhdGEgc3BlY2lmaWNhdGlvbg=="`
+
+In the binary JData, a byte-stream shall be encoded using a similar `"name":value` pair where the 
+`value` is reprented by an `[H]` marker. As specified in the 
+[UBJSON Specification (Draft 12)](http://ubjson.org/type-reference/value-types/#numeric-gt-64bit), 
+the `[H]` marker is immediately followed by the length of the byte stream, then followed by 
+the raw binary values of the byte-stream **without Base64 encoding**. The same example above 
+can be stored as
+
+`[U][12][_ByteStream_][H][U][19][JData specification]`
+
+The parsing and interpretation of the byte-stream data are application dependent. This is the most 
+generic form of data storage but contains the least data semantic information. One can use this 
+construct as containers to binary files, data segments, or encrypted data or files. In the case 
+of data encryption, additional information related to the encryption and decryption, if needed, 
+shall be stored as the metadata to the `"_ByteStream_"` object with a format specified in the 
+[Metadata section](#metadata).
 
 
 Indexing and Accessing JData
@@ -1084,7 +1142,7 @@ of each node is listed below on the right side:
          },
          {                                          <- [2,3]
              "_TreeNode_(node3)": data3             <- [2,3,1], or [[2,3]]
-         },
+         }
      ]
   }
 ```
@@ -1097,10 +1155,10 @@ The third parameter, `is_compact` is a boolean flag. If set to `true`, `JD_GetNo
 shall skip the index if any of the dimensions along the indexing vector is a singlet, 
 i.e. the child count is 1. The compact indexing vector, enclosed by double-square-brackets 
 as `[[...]]`, shall be passed to `JD_GetNode` as the 2nd input when `is_compact` is `true`.
-Using the above example, both index vectors [[2,3]] and [2,3,1] refers to 
+Using the above example, both index vectors [[2,3]] and [2,3,1] refer to 
 `"_TreeNode_(node3)": data3`. Please be aware that the compact indexing vector can not
-distinguish between row and column vectors, as the row vector in JData has a trailing 
-singlet dimension (see N-D array section).
+distinguish between row and column vectors, as the column vector in JData has a trailing 
+singlet dimension ([see N-D array section](#direct-storage-of-n-d-arrays)).
 
 An optional alternative indexing vector definition allows to replace the index within a 
 structure by a corresponding string, can be the name of the data item or a hashed version. 

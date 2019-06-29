@@ -340,11 +340,11 @@ also present in any branch or leaf.
 Below is a short summary of the JData data annotation/storage keywords to be introduced
 
 * **Data grouping**: `_DataGroup_`, `_Dataset_`, `_DataRecord_`
-* **N-D Array**: `_ArrayType_`, `_ArraySize_`, `_ArrayIsComplex_`, 
-  `_ArrayIsSparse_`,`_ArrayData_`,`_ArrayCompressionMethod_`,`_ArrayCompressionSize_`, 
-  `_ArrayCompressionEndian_`, `_ArrayCompressedData_`
+* **N-D Array**: `_ArrayType_`, `_ArraySize_`, `_ArrayIsComplex_`, `_ArrayIsSparse_`,
+  `_ArrayData_`,`_ArrayZipType_`,`_ArrayZipSize_`, `_ArrayZipData_`, `_ArrayZipEndian_`, 
+  `_ArrayZipLevel_`, `_ArrayZipOptions_`
 * **Hash/Map**: `_MapData_`
-* **Table**: `_TableData_`
+* **Table**: `_TableData_`, `_TableCols_`, `_TableRows_`, `_TableRecords_`
 * **Tree**: `_TreeData_`,`_TreeNode_`,`_TreeChildren_`
 * **Linked List**: `_ListNode_`,`_ListNext_`,`_ListPrior_`,`_LinkedList_`
 * **Graph**: `_GraphData_`,`_GraphNodes_`,`_GraphEdges_`,`_GraphMatrix_`
@@ -713,30 +713,30 @@ files. Compressed data format is only supported in the annotated array storage f
 
 Four additional nodes are added to the annotated array structure
 
-* **`_ArrayCompressionMethod_`**: (required) a string-valued leaflet to store the compression 
+* **`_ArrayZipType_`**: (required) a string-valued leaflet to store the compression 
   method, for example, "zlib", "gzip" or "lzma"
-* **`_ArrayCompressionSize_`**: (required) the dimensions of the pre-processed array, i.e. the data
+* **`_ArrayZipSize_`**: (required) the dimensions of the pre-processed array, i.e. the data
   originally stored in `_ArrayData_` in the format specified by `"_ArrayType_"`, 
   before the array binary stream type-casted to byte stream and compression.
-* **`_ArrayCompressedData_`**: (required) in addition, the `"_ArrayData_"` node is replaced by 
-  `"_ArrayCompressedData_"`. In the case of JSON-formatted JData files, 
-  `"_ArrayCompressedData_"` has a string value storing the "Base64" encoded compressed 
+* **`_ArrayZipData_`**: (required) in addition, the `"_ArrayData_"` node is replaced by 
+  `"_ArrayZipData_"`. In the case of JSON-formatted JData files, 
+  `"_ArrayZipData_"` has a string value storing the "Base64" encoded compressed 
   byte-stream of the pre-processed array. In the case of UBJSON flavored JData, 
-  `"_ArrayCompressedData_"` directly stores the compressed byte stream of the 
+  `"_ArrayZipData_"` directly stores the compressed byte stream of the 
   pre-processed array without "Base64" encoding.
 
 In addition, the following optional parameters may also be used
 
-* **`_ArrayCompressionEndian_`**: (optional) a case-insensitive string, either "little" or "big",
+* **`_ArrayZipEndian_`**: (optional) a case-insensitive string, either "little" or "big",
   indicating the endianness of the byte-stream before compression; if missing, assume
   to be "little"
-* **`_ArrayCompressionLevel_`**: (optional) a numerical value, typically an integer between
+* **`_ArrayZipLevel_`**: (optional) a numerical value, typically an integer between
   0 and 9, specifying the level of the compression (interpretation is method/library-dependent)
-* **`_ArrayCompressionOptions_`**: (optional) an array object allowing users to specify
+* **`_ArrayZipOptions_`**: (optional) an array object allowing users to specify
   additional compression-method specific parameters (interpretation is method/library-dependent)
 
-When a compressed array format is used, `"_ArrayCompressionMethod_"` and 
-`"_ArrayCompressionSize_"` must appear before `"_ArrayCompressedData_"`.
+When a compressed array format is used, `"_ArrayZipType_"` and 
+`"_ArrayZipSize_"` must appear before `"_ArrayZipData_"`.
 
 
 #### Associative arrays or maps
@@ -782,7 +782,50 @@ columns (fields) and rows (records). For example
   William 21     MS      71.0
   Om      22     BE      67.1
 ```
-Such data can also be stored in JSON/UBJSON in two forms: 
+Such data can also be stored in JSON/UBJSON using 3 dedicated keywords
+* **`"_TableCols_"`**: a 1-D array denoting the name and type for each of the column of the table, 
+     can be empty if no name or types are associated with the columns
+* **`"_TableRows_"`**: a 1-D array denoting the name and type for each of the row of the table
+     can be empty if no name or types are associated with the rows
+* **`"_TableRecords_"`**: a 2-D array storing each entry in the 2-D table.
+
+For example, the above table can be serailized using the below format
+```
+    {
+        "_TableCols_": ["Name", "Age", "Degree", "Height"],
+	"_TableRows_": [],
+	"_TableRecords_": [
+	   ["Andy",    21, "BS", 69.2],
+	   ["William", 21, "MS", 71.0],
+	   ["Om",      22, "BS", 67.1]
+	]
+    }
+```
+
+The elements in the `"_TableRows_"` and `"_TableCols_"` can be a structure to accommodate 
+additional metadata associated with the row or column. One can use `"DataName"` to specify 
+the string name of the row or column, and `"DataType"` to specify their data types.
+
+The supported `"DataType"` values are the same as those defined for `"_ArrayType_"` for 
+numerical arrays, with the addition of the below types
+
+* `"string"`: a UTF-8 encoded string
+* `"bool"`: a boolean: either `true` or `false`
+* `"blob"`: a binary byte-stream, the format of the `blob` record is described in the [Generic byte-stream data](#generic-byte-stream-data) below (without the `"_ByteStream_"` container)
+
+For example, in the above example, one can define the columns as
+```
+    "_TableCols_": [
+        {"DataName": "Name", "DataType": "string"}, 
+        {"DataName": "Age", "DataType": "uint32"}, 
+	{"DataName": "Degree", "DataType": "string"}, 
+	{"DataName": "Height", "DataType": "single"}
+    ],
+    ...
+```
+
+In addition, a table can also be converted to an array of maps if a name is associated 
+with each of the rows or columns.
 
 * **Array of structures**: the table data can be serialized by grouping records in rows, such as
 
@@ -1052,14 +1095,14 @@ One can also apply array compression, as explained above, to further reduce the 
 	"_GraphMatrix_": {
 		"_ArrayType_": "uint8",
 		"_ArraySize_": [4,4],
-		"_ArrayCompressionSize_": [1,16],
-		"_ArrayCompressionMethod_": "zlib",
-		"_ArrayCompressionEndian_": "little",
-		"_ArrayCompressedData_": "eJxjYGBgYGQAE0DIyAAAAC0ABg=="
+		"_ArrayZipSize_": [1,16],
+		"_ArrayZipType_": "zlib",
+		"_ArrayZipEndian_": "little",
+		"_ArrayZipData_": "eJxjYGQAAkYQyQhCAAA5AAY=="
 	}
   }
 ```
-here the `"_ArrayCompressedData_"` stores the row-major-serialized, byte-typecasted,
+here the `"_ArrayZipData_"` stores the row-major-serialized, byte-typecasted,
 zlib-compressed and finally base64-encoded adjacency matrix.
 
 In addition, a weighted graph can also be stored using the adjacency matrix by replacing

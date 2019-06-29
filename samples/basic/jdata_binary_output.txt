@@ -277,28 +277,6 @@ json2data(:,:,3,2) =
 
 
 %=================================================
-%  a 3-D array in nested array form (JSONLab 1.9)
-%=================================================
-
-
-ans =
-
-[[[ii][ii][ii][ii]][[i	i
-][ii][ii][ii]][[ii][ii][ii][ii]][[ii][ii][ii][ii ]][[i!i"][i#i$][i%i&][i'i(]][[i)i*][i+i,][i-i.][i/i0]]]
-
-
-%=================================================
-%  a 3-D array in annotated array form (JSONLab 1.9 or earlier)
-%=================================================
-
-
-ans =
-
-{U_ArrayType_SUdoubleU_ArraySize_[$U#UU_ArrayData_[$i#U0	
- !"#$%&'()*+,-./0}
-
-
-%=================================================
 %  a complex number
 %=================================================
 
@@ -711,7 +689,7 @@ data2json =
 
 ans =
 
-[{UFormatSUdd-MMM-uuuuUTimeZoneSU UYearIßUMonthiUDayiUHouri UMinutei USecondi USystemTimeZoneSUAmerica/New_York}{UFormatSUdd-MMM-uuuuUTimeZoneSU UYearIßUMonthiUDayi	UHouri UMinutei USecondi USystemTimeZoneSUAmerica/New_York}]
+[{UFormatSUdd-MMM-uuuuUTimeZoneSU UYearIßUMonthiUDayiUHouri UMinutei USecondi USystemTimeZoneSUAmerica/Los_Angeles}{UFormatSUdd-MMM-uuuuUTimeZoneSU UYearIßUMonthiUDayi	UHouri UMinutei USecondi USystemTimeZoneSUAmerica/Los_Angeles}]
 
 
 json2data = 
@@ -768,4 +746,39 @@ ans =
 json2data = 
 
     table: {[1x1 struct]  [1x1 struct]  [1x1 struct]}
+
+
+%=================================================
+%  a 2-D array in compressed array format
+%=================================================
+
+
+ans =
+
+{U_ArrayType_SUdoubleU_ArraySize_[$U#U
+U_ArrayZipSize_[$U#UÈU_ArrayZipType_SUzlibU_ArrayZipData_[$U#U xc` ö4£æ;jî(P/] ÁÎ}
+
+
+json2data =
+
+     1     0     0     0     0     0     0     0     0     0
+     0     1     0     0     0     0     0     0     0     0
+     0     0     1     0     0     0     0     0     0     0
+     0     0     0     1     0     0     0     0     0     0
+     0     0     0     0     1     0     0     0     0     0
+     0     0     0     0     0     1     0     0     0     0
+     0     0     0     0     0     0     1     0     0     0
+     0     0     0     0     0     0     0     1     0     0
+     0     0     0     0     0     0     0     0     1     0
+     0     0     0     0     0     0     0     0     0     1
+     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0
+     1     0     0     0     0     0     0     0     0     0
 

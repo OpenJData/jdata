@@ -1,10 +1,10 @@
- JData: A general-purpose data storage and interchange format
+JData: A general-purpose data storage and interchange format
 ============================================================
 
 - **Status of this document**: This document is current under development.
 - **Copyright**: (C) Qianqian Fang (2011, 2015, 2019) <q.fang at neu.edu>
 - **License**: Apache License, Version 2.0
-- **Version**: 0.6 (Draft 1)
+- **Version**: 0.8 (Draft 2)
 - **Abstract**:
 
 > JData is a general-purpose data interchange format aimed for portability,
@@ -13,11 +13,11 @@ readability and simplicity. It utilizes the JavaScript Object Notation
 store complex hierarchical data in both text and binary formats. In this 
 specification, we define a list of JSON-compatible constructs to store
 a wide range of data structures, including scalars, arrays, structures, 
-tables, hashes, linked lists, trees and graphs, and support for optional data
+tables, hashes, linked lists, trees and graphs, and support optional data
 grouping and metadata for each data element. The generated data files are 
 compatible with JSON/UBJSON specifications and can be readily processed by 
 most existing parsers. Advanced features such as array compression, data 
-links and anchors were supported to greatly enhance portability and 
+linking and anchoring are supported to greatly enhance portability and 
 scalability of the generated data files.
 
 
@@ -48,6 +48,8 @@ scalability of the generated data files.
             - [Complex-valued arrays](#complex-valued-arrays)
             - [Sparse arrays](#sparse-arrays)
             - [Sparse complex-valued arrays](#sparse-complex-valued-arrays)
+            - [Special matrices](#special-matrices)
+            - [Complex-valued special matrices](#complex-valued-special-matrices)
             - [Compressed array storage format](#compressed-array-storage-format)
         + [Associative arrays or maps](#associative-arrays-or-maps)
         + [Tables](#tables)
@@ -58,7 +60,7 @@ scalability of the generated data files.
 - [Indexing and Accessing JData](#indexing-and-accessing-jdata)
     * [Index vector](#index-vector)
     * [Data query](#data-query)
-- [Conversions Between JData Files](#conversions-between-jdata-files)
+- [Converting Between JData Files](#converting-between-jdata-files)
 - [Data Referencing and Links](#data-referencing-and-links)
 - [Recommended File Specifiers](#recommended-file-specifiers)
 - [Summary](#summary)
@@ -72,121 +74,117 @@ Introduction
 
 
 Data are the digital representations of our world. Generating and processing 
-data are the essential parts of our daily lives, and are at the very 
-foundations of modern sciences, information technologies, businesses, and the 
-interactions between our global societies.
+data are essential parts of our daily lives, and form the very 
+foundations of modern sciences, information technologies, businesses, and 
+interactions between global societies.
 
-Data take many different forms. Some data can be represented by simple scalars; 
-some others have complex forms with hierarchical structures. An efficient 
-representation of data also strongly depends on the application needs. In some 
-cases, plain text files with white-space separated fields are sufficient; 
-however, for performance-sensitive applications, using binary formats can 
-significantly reduce loading and processing time. The abilities to store and 
-parse complex data structures are particularly important to the scientific 
-communities.
+Data can take many forms. Some data can be represented by simple scalars; 
+others have complex forms with hierarchical structures. An efficient 
+representation of data also strongly depends upon application-specific needs. In some 
+cases, plain text files with white-space delimited fields are sufficient; 
+however, for performance-sensitive applications, binary formats can 
+significantly reduce loading and processing time. The ability to store and 
+parse complex data structures is particularly important to the scientific 
+community.
 
-It is a challenging task to encapsulate wide varieties of data forms in a 
+It is a challenging task to encapsulate a wide variety of data forms within a 
 single data interchange format. There have been many previous efforts in 
 designing a general-purpose data storage specification. Some of them have 
-become popular choices in one or multiple categories of applications. 
+become popular choices in one or multiple applications. 
 Extensible Markup Language (XML), for example, is ubiquitously used as a 
 data-exchange format, but the verbosity of the syntax, moderate complexity for 
 parsing, impeded readability and inefficiency in expressing structured data 
-suggested room for alternative formats. Comma Separated Value (CSV), a rather 
-simple plain-text format, is used among some applications to exchange a tabular 
-data structure (such as a spreadsheet); yet, its inability to encode more 
-complex data forms, lack of flexibility and precision restrict it to specific 
+Indicate room for improvement. Comma Separated Value (CSV), a rather 
+simple plain-text format, is used among some applications to exchange tabular 
+data structures (such as spreadsheets); yet, its inability to encode more 
+complex data forms, lack of flexibility and data precision restrict it to specific 
 applications.
 
-Hierarchical Data Format (HDF) is a format targeting at the broad needs from 
+The Hierarchical Data Format (HDF) is a format targeting the broad needs of
 the scientific communities. It has an extensible hierarchical data model with a 
 large capacity to represent complex binary data. However, to effectively use 
-HDF requires skillful implementation and in-depth understanding to the 
+HDF requires skillful implementation and an in-depth understanding of the 
 underlying data models. For small projects with non-critical performance needs, 
-using an advanced data format such as HDF may requires additional development 
-and maintenance efforts. Similar arguments can be made to the Common Data 
+using an advanced data format such as HDF may require additional development 
+and maintenance efforts. Similar arguments can be made for the Common Data 
 Format (CDF) or Network Common Data Format (netCDF) that are partly derived 
 from HDF. In addition, the MATLAB mat-file format and Tecplot data format are 
-also used among the research communities. Because of the requirement of 
-propitiatory software or libraries, these formats have also found difficulties 
-to achieve wide-spread use outside of the user communities of the associated 
-software.
+also used among the research communities. Wide-spread adoption of these formats has been hindered by the need for proprietary software or libraries, and usage is generally limited to the respective user communities.
 
 ### JSON and UBJSON
 
 The JavaScript Object Notation (JSON) format is a text-based data format that 
-is known for its capability of storing complex data, excellent portability and 
-human-readability. JSON is widely adopted in modern web applications, and is 
+is known for its complex data storage capability, excellent portability and 
+human-readability. JSON has been widely adopted in modern web applications, and is 
 becoming popular among local/native applications. The key advantages of JSON 
 include:
 
-* **simplicity**: JSON data are composed by a list of `"name":value` pairs; 
-  such a simple grammar greatly eases the use and parsing of the data file; free 
+* **simplicity**: JSON data are composed of lists of `"name":value` pairs; 
+  such simple syntax greatly eases the use and parsing of the data file; free 
   JSON-encoders and decoders are widely available for most popular programming 
   languages;
 * **human-readability**: the text-based nature of JSON and its clean, 
   easy-to-read format make it intuitively readable without in-depth knowledge of 
   the format itself;
 * **hierarchical data support**: JSON has a tree-like data storage paradigm 
-  which has the native capacity to support complex hierarchical data structures; 
+  which has the capacity to support complex hierarchical data structures; 
   there is no inherent data size limit imposed by the format itself;
 *  **web-readiness**: because JSON can be readily parsed by JavaScript, most 
-  JSON-encoded data file can be directly invoked (inline or load from remote 
-  site) from a JavaScript based web-application.
+  JSON-encoded data files can be directly invoked (inline or loaded from remote 
+  sites) by a JavaScript based web-application.
 
 JSON also has limitations. JSON's `"value"` fields are weakly-typed. They only 
-support strings, numbers, and Boolean types, but lack of the fine-granularity 
+support strings, numbers, and Boolean types, and lack the fine-granularity 
 to represent various numerical types of different byte-lengths (in C-language, 
 for example, short, int, long int, float, double, long double) and their signs 
 (signed and unsigned). Because JSON is a text-based format, the size of the 
-data file can be significantly larger than a binary format and requires 
+data file can be significantly larger than a respective binary file  and requires 
 additional conversion when used in an application. This introduces overhead in 
 both storage and processing.
 
 The Universal Binary JSON (UBJSON) is one of the binary counterparts to the JSON format. 
-It specifically addresses the above mentioned limitations, yet, adheres to a 
+It specifically addresses the above mentioned limitations, yet adheres to a 
 simple grammar similar to the text-based JSON. As a trade-off, it loses the 
-"human-readability" to a certain extend. Although the implemented parsers for 
-UBJSON are not as abundant as JSON, due to the simplicity of the format itself, 
-the development cost for implementing a parser for a new programming language 
-is significantly lower than other more complex data formats.
+"human-readability" to a certain extent. Although implemented parsers for 
+UBJSON are not as abundant as those for JSON, the simplicity of the format 
+significantly lowers the development cost of implementing new readers/parsers.
 
-With the ease-of-use, superior portability and parser availability, JSON and 
-UBJSON have the potentials to serve as the main-stream data storage and 
-interchange formats for general needs, especially for storage and interchange
+With ease-of-use, superior portability and parser availability, JSON and 
+UBJSON have the potential to serve as main-stream data storage and 
+interchange formats for general needs, especially for  the storage and interchange
 scientific data. A combination of JSON and its binary counterpart offers features 
-that are not currently available with the existing data storage schemes. Although 
-they do not provide all the advanced features found in the more sophisticated 
+that are not currently available within existing data storage schemes. Although 
+they do not provide all of the advanced features found in more sophisticated 
 formats, their greatly simplified encoding and decoding strategies permit 
-efficient data sharing among the general audiences.
+efficient data sharing among general audiences.
 
 ### JData specification overview
 
 JData is a specification for storing, exchanging and processing general-purpose 
-data that are commonly encountered in information technology (IT) industries and 
+data that are commonly encountered in the information technology (IT) industries and 
 research communities. It has a text/UNICODE format derived from the JSON 
 specification and a binary format derived from the UBJSON specification. JData 
-is designed to represent the commonly used data structures including arrays, 
+is designed to represent commonly used data structures, including arrays, 
 structures, trees and graphs. A round-trip conversion is defined between the 
 text and binary versions of JData documents.
 
 The purpose of this document is to define the text and binary JData format 
-specifications. This is achieved through the definition of a semantic layer 
+specifications. This is achieved through defining a semantic layer 
 over the JSON/UBJSON data storage syntax to map various types of complex data 
-structures. Such semantic layer includes
+structures. Such a semantic layer includes
 
 - a list of dedicated `"name"` fields, or keywords, that define the containers 
   of various data types that are commonly used in research,
 - a list of dedicated `"name"` fields and formats to facilitate the grouping and 
   organization of hierarchical data,
 - a list of format properties for the associated "value" field to store the 
-  specific metadata of the data points, and, in addition,
+  specific metadata of the data points
 - a set of conversion rules between the text and binary forms.
 
-In the following sections, we will define the basic JData grammar, data models, 
+In the following sections, we will define the basic JData grammar and data models, 
 followed by the keywords for data grouping and various data types, including 
 scalars, N-dimensional arrays, sparse and complex arrays, structures, tables, 
-hashes/associative arrays, trees and graphs. The expressions of these data 
+hashes/associative arrays, trees and graphs. The expressions for these data 
 structures in both text and binary forms are specified and exemplified, and 
 their conversion rules are defined.
 
@@ -196,7 +194,7 @@ Grammar
 ### Text-based JData Storage Grammar
 
 The text-based JData grammar is identical to the JSON grammar defined in 
-[RFC4627], except that JData also accepts the Concatenated JSON (CJSON), 
+[RFC4627], with the exception that JData also accepts the Concatenated JSON (CJSON), 
 streaming format, defined in the following form:
 ```
     {
@@ -220,23 +218,23 @@ The binary JData grammar is identical to the UBJSON grammar defined in the
 [UBJSON Specification (Draft 12)](http://ubjson.org), with the following three exceptions
 
 1. JData stores an `[N]` (`"no-op"`) record as `null` when saving the data in the text-format,
-2. JData uses IEEE 754 binary form to store +/-Infinity, instead of converting to [Z], and
+2. JData uses IEEE 754 binary form to store +/-Infinity instead of converting to [Z]
 3. optimized array container header was extended to support N-dimensional dense arrays:
 ```
-[[] [$] [type] [#] [[] [$] [nx type] [#] [ndim] [nx ny nz ...] [nx*ny*nz*...*sizeof(type)]
+[[] [$] [type] [#] [[] [$] [nx type] [#] [ndim type] [ndim] [nx ny nz ...] [nx*ny*nz*...*sizeof(type)]
 ```
    or
 ```
 [[] [$] [type] [#] [[] [nx type] [nx] [ny type] [ny] [nz type] [nz] ... []] [nx*ny*nz*...*sizeof(type) ]
 ```
 where `ndim` is the number of dimensions, and `nx`, `ny`, and `nz` ... are 
-all non-negative numbers specifying the dimensions of the N-dimensional array,
-`nz/ny/nz/ndim` types must be one of the UBJSON integer types (`i,U,I,l,L`), . 
+all non-negative numbers specifying the dimensions of the N-dimensional array.
+`nz/ny/nz/ndim` types must be one of the UBJSON integer types (`i,U,I,l,L`). 
 The binary data of the N-dimensional array is then serialized in the **row-major** format 
 (similar to C, C++, Javascript or Python) order.
 
 As a special note, all UBJSON integer types must be stored in the Big-Endian 
-format, according to the specification; the storage to the floating point types 
+format, according to the specification; the storage of floating point types 
 (`d,D`) follows the IEEE 754 specification.
 
 
@@ -255,15 +253,15 @@ Topologically, we define different parts of a JData document using the below ter
 * **root**: the top-most node of a JSON object
 * **super-root**: the top level node in a JData document containing multiple 
   JSON/UBJSON objects in the form of a CJSON
-* **named node**: a node in the form of `"name":{...}` or `"name":[]`, in the case 
+* **named node**: a node in the form of `"name":{...}` or `"name":[]` in the case 
   of named and index leaves and branches, respectively, or `"name":value` in the case
   of a leaflet
-* **indexed node**: a node in the form of `{...}` or `[]`, in the case of named 
+* **indexed node**: a node in the form of `{...}` or `[]` in the case of named 
   and index leaves and branches, respectively, or a single `value` in the case
   of a leaflet
-* **a structure**: a named or index node made of named sub-nodes, represented by `{...}`, 
+* **a structure**: a named or index node made of named sub-nodes, represented by `{...}`; 
   a structure can be empty
-* **an array**: a named or index node made of indexed sub-nodes, represented by `[...]`,
+* **an array**: a named or index node made of indexed sub-nodes, represented by `[...]`;
   an array can be empty
 
 A leaflet can only take one of the two possible forms: `value`, referred to as the
@@ -286,19 +284,19 @@ annotations supported in JData include
   information of a paper
 * **data group**: a group of "logically connected" datasets
 * **auxiliary data**: nodes that store "weakly-relevant" or "irrelevant" data to 
-the "primary" data. the auxiliary data can appear at any level in the data annotation 
+the "primary" data. The auxiliary data can appear at any level in the data annotation 
 hierarchy.
 
-The interpretations to the "meaningful datum", "logically connected data", 
+The interpretations for "meaningful datum", "logically connected data", 
 "primary data" and "weakly-relevant or irrelevant data" are application dependent.
 
-The data group annotations are ranked in the below order, from the highest 
-level to the lowest level:
+The data group annotations are ranked in the below order, from highest 
+ to lowest level:
 
 ` super-root > root >  data group >= dataset >= data record >= leaf > leaflet `
 
-for each annotation level, it can only contain elements annotated of the same 
-level or lower levels, but not the upper level annotations. All data annotation
+Each annotation level only contain annotated  elements of the same 
+or lower levels, but not upper level annotations. All data annotation
 objects can be empty, i.e. do not contain any element. An example JData 
 organization schematic is shown below
 
@@ -335,14 +333,14 @@ Data Annotation Keywords
 All JData keywords are case sensitive. Data groups, datasets and data records 
 can contain metadata to include additional information regarding the data themselves, 
 such as name, create date and user-defined headers. However, metadata can 
-also present in any branch or leaf.
+also be present in any branch or leaf.
 
-Below is a short summary of the JData data annotation/storage keywords to be introduced
+Below is a short summary of the JData data annotation/storage keywords that can be introduced
 
 * **Data grouping**: `_DataGroup_`, `_Dataset_`, `_DataRecord_`
 * **N-D Array**: `_ArrayType_`, `_ArraySize_`, `_ArrayIsComplex_`, `_ArrayIsSparse_`,
-  `_ArrayData_`,`_ArrayZipType_`,`_ArrayZipSize_`, `_ArrayZipData_`, `_ArrayZipEndian_`, 
-  `_ArrayZipLevel_`, `_ArrayZipOptions_`
+  `_ArrayData_`,`_ArrayShape_`, `_ArrayZipType_`,`_ArrayZipSize_`, `_ArrayZipData_`, 
+  `_ArrayZipEndian_`, `_ArrayZipLevel_`, `_ArrayZipOptions_`
 * **Hash/Map**: `_MapData_`
 * **Table**: `_TableData_`, `_TableCols_`, `_TableRows_`, `_TableRecords_`
 * **Tree**: `_TreeData_`,`_TreeNode_`,`_TreeChildren_`
@@ -357,8 +355,8 @@ Below is a short summary of the JData data annotation/storage keywords to be int
 
 The use of data grouping keywords is not mandatory in a JData document. 
 Nonetheless, properly partitioning and grouping the data based on their semantic 
-relationships and name the components accordingly can greatly enhance the 
-portability and readability of the data, and thus, are strongly recommended.
+relationships and naming the components accordingly can greatly enhance the 
+portability and readability of the data, and thus are strongly recommended.
 
 #### Data Group
 
@@ -379,7 +377,7 @@ or
 ` "_DataGroup_(a name string): []`
 
 If multiple data groups are stored inside a structure, a unique name 
-string, among the items under the same parent object, must be provided 
+string, among items under the same parent object, must be provided 
 for each data group. For example
 ```
   {
@@ -397,7 +395,7 @@ array
       indexed_node1, indexed_node2, indexed_node3,...
   ]
 ```
-if one needs to define the `indexed_node2` into a data group, one must define
+if one needs to define the `indexed_node2` as a data group, one must define
 ```
   [
       indexed_node1,
@@ -426,7 +424,7 @@ with an optional name parameter in the following format:
 
 ####  Data record
 
-Also similarly, a dataset is specified by
+Also similarly, a data record is specified by
 
 `"_DataRecord_": { ... }`
 
@@ -444,27 +442,27 @@ with an optional name parameter in the following format:
 Metadata records can be associated with a data group, dataset or data record
 (or any branch or leaf). It is optional. Metadata can have two forms
 
-* **inline metadata**: metadata defined as part of the annotation tag string, and
+* **inline metadata**: metadata defined as part of the annotation tag string
 * **metadata node**: a metadata structure added as the first element of a node (named or indexed)
 
 The inline metadata is defined by attaching a series of comma-separated `property=value` 
 strings to the data group keywords (`_DataGroup_`,`_Dataset_`,`_DataRecord_`), separated by 
-two colons, i.e. `"::"`, for example
+two colons, i.e. `"::"`. For example
 
 `"_{DataGroup,Dataset,DataRecord}_(name)::Property1=...,Property2=...,..."`
 
-The `property` name should not contain space or comma. If comma appears inside the `value`,
+The `property` name should not contain spaces or commas. If commas appear inside the `value`,
 it must be escaped using the form `"\,"`. 
 
-An inline metadata can be attached to any named node, for example
+Inline metadata can be attached to any named node, for example
 
 `"name::Property1=...,Property2=...,..."`
 
-One or more above permitted white spaces, see above, may be inserted before or after 
-separators `"::"`, `","` and `"="` without changing the interpretations of the data.
+One or more permitted white spaces, see above, may be inserted before or after 
+separators `"::"`, `","` and `"="` without changing the interpretation of the data.
 
 The inline metadata is primarily used to store simple properties. When storage of more complex 
-metadata is needed, a dedicated "metadata node" shall be inserted to the data object as the
+metadata is needed, a dedicated "metadata node" should be inserted to the data object as the
 first child of the annotated object. 
 
 For example, if the data to be annotated is a structure, the metadata node is defined 
@@ -501,8 +499,8 @@ If the data to be annotated is an array, the metadata record is an indexed leaf 
     ...
   ]
 ```
-The property names are user-defined. Recommended properties include but not limited
-to the following list
+The property names are user-defined. Recommended properties include, but are not limited
+to, the following list
 ```
   Version
   Author
@@ -514,7 +512,7 @@ to the following list
 
 ### Data Storage Keywords
 
-JData is designed to store wide varieties of data forms. The most common data structures
+JData is designed to store a wide variety of data forms. The most common data structures
 used in the scientific communities include scalars, constants, arrays, structures, 
 tables, associative arrays, trees, and graphs.
 
@@ -522,9 +520,9 @@ tables, associative arrays, trees, and graphs.
 
 The following constants are supported by this version of the specification
 
-* `NaN`: An `NaN` defined by the IEEE 754 standard shall be stored as `"_NaN_"` as a string 
-  leaflet in text-based JData; in the binary JData, it should be stored in the IEEE 754 format
-* `+/-Inf`: A `+infinity` or `-infinity` defined by the IEEE 754 standard shall be stored as a 
+* `NaN`: An `NaN` defined by the IEEE 754 standard shall be stored as a `"_NaN_"` string 
+  leaflet in text-based JData; in binary JData, it should be stored in the IEEE 754 format
+* `+/-Inf`: A `+infinity` or `-infinity` defined by the IEEE 754 standard shall be stored as 
   string leaflets `"+_Inf_"` and `"-_Inf_"`, respectively, in the text-based JData ("+" sign
   can be omitted); in the binary JData, they should be stored in the IEEE 754 format
 * logical `true`/`false`: A logical `true`/`false` should be represented by the JSON `true/false` 
@@ -598,8 +596,8 @@ Here, the array annotation keywords are defined below:
 * **`"_ArrayType_"`**: (required) a case-insensitive string value to specify the type of the data, see below
 * **`"_ArraySize_"`**: (required) an integer-valued (see below) 1-D row vector, storing the dimensions 
   of the N-D array
-* **`"_ArrayData_"`**: (required) a 1-D row vector storing the serialized array values, using the 
-  **row-major** element order
+* **`"_ArrayData_"`**: (required) a 1-D row vector (or a rectangular array, see below) storing the serialized 
+  array values, using the **row-major** element order
 
 To facilitate the pre-allocation of the buffer for storage of the array in the parser, 
 it is required that the `"_ArrayType_"` and `"_ArraySize_"` nodes must appear before 
@@ -609,11 +607,11 @@ The supported data types are similar to those supported by the UBJSON format, i.
 
 * **uint8**: unsigned byte (8-bit), `[U]` in UBJSON
 * **int8**: signed byte (8-bit), `[i]` in UBJSON
-* **uint16**: unsigned short (16-bit),  no correspondance in UBJSON, map to `[I]`
+* **uint16**: unsigned short (16-bit),  no correspondence in UBJSON, map to `[I]`
 * **int16**: signed short (16-bit), `[I]` in UBJSON
-* **uint32**: unsigned integer (32-bit),  no correspondance in UBJSON, map to `[l]`
+* **uint32**: unsigned integer (32-bit),  no correspondence in UBJSON, map to `[l]`
 * **int32**: signed integer (32-bit), `[l]` in UBJSON
-* **uint64**: unsigned long long integer (64-bit), no correspondance in UBJSON, map to `[L]`
+* **uint64**: unsigned long long integer (64-bit), no correspondence in UBJSON, map to `[L]`
 * **int64**: signed long long integer (64-bit), `[L]` in UBJSON
 * **single**: single-precision floating point (32-bit), `[d]` in UBJSON
 * **double**: double-precision floating point (64-bit), `[D]` in UBJSON
@@ -654,7 +652,7 @@ row vector, followed by the row vector of the serialized non-zero array element
 values. For an N-D sparse array, each non-zero value requires an N-tuple index to specify 
 its location.
 
-For example, if a 3-D sparse array has the following non-zero element at the specified 
+For example, if a 3-D sparse array has the following non-zero elements at the specified 
 locations by a triplet `(i1, i2, i3)`:
 ```
   a: i1, i2, i3, value
@@ -682,11 +680,11 @@ Using the combination of `"_ArrayIsComplex_"` and `"_ArrayIsSparse_"`, one can s
 a complex-valued sparse array using JData. In this case, both `"_ArrayIsComplex_":true` 
 and `"_ArrayIsSparse_":true` must be presented in the structure, with `"_ArrayData_"` 
 ordered by the N-tuple non-zero element indices (left-most index first, and so on), 
-each as a row vector, followed by a row vector for the real-values of the non-zero elements, and 
-lastly the row vector for the imaginary-values of the non-zero elements. All row vectors
+each as a row vector, followed by a row vector for the real-values of the non-zero elements, and ended
+lastly with the row vector for imaginary-values of the non-zero elements. All row vectors
 of `"_ArrayData_"` must have the same length.
 
-For example, if a 3-D sparse array has the following non-zero complex element at the 
+For example, if a 3-D sparse array has the following non-zero complex elements at the 
 specified indices `(i1, i2, i3)`
 ```
   a: i1, i2, i3,  complex values
@@ -706,18 +704,200 @@ it shall be stored in the following JSON format
 ```
 or the corresponding UBJSON equivalents.
 
+
+##### Special matrices
+
+JData can efficiently store a list of special matrices via the `"_ArrayShape_"` descriptor.
+
+The `"_ArrayShape_"` descriptor can be used in conjunction with `"_ArrayIsComplex_"`,
+but it shall not be used when `"_ArrayIsSparse_"` is set to `true`. The `"_ArrayShape_"` 
+node must appear before `"_ArrayData_"` if present.
+
+The `"_ArrayShape_"` field shall be either in the form of
+
+`"_ArrayShape_": "shapeid"`
+
+or
+
+`"_ArrayShape_": ["shapeid", param1, param2, ...]`
+
+Here, the `"shapeid"` tag is a case-insensitive string specifying the type of the
+special matrix. The currently supported `"shapeid"` values include
+
+* `"diag"`: a diagonal matrix, can be a non-square matrix (optional `param1` 
+  defines the length of the diagonal elements, must be less than the smallest 
+  value in the `_ArraySize_` vector)
+* `"upper"`: an upper triangular (square) matrix (2-D only)
+* `"lower"`: a lower triangular (square) matrix (2-D only)
+* `"uppersymm"`: a symmetric (square) matrix, only storing the upper triangle (2-D only)
+* `"lowersymm"`: a symmetric (square) matrix, only storing the lower triangle (2-D only)
+
+For the above array types, the array entries falling under the mask of the prescribed shape,
+referred to as the "effective elements", are serialized as a single vector in the row-major 
+order in `"_ArrayData_"`. For example, a 3x3 upper triangular matrix:
+```
+   a11  a12  a13
+    0   a22  a23
+    0    0   a33
+```
+can be stored as 
+```
+ {
+   ...
+   "_ArrayShape_": "upper",
+   "_ArrayData_": [a11, a12, a13, a22, a23, a33]
+ }
+```
+
+In addition, band matrices are supported via the below `"shapeid"` tags
+
+* `"upperband"`: an upper-band matrix (2-D only, optional `param1` defines the 
+    number of super-diagonals of the matrix)
+* `"lowerband"`: a lower-band matrix (2-D only, optional `param1` defines the 
+    number of sub-diagonals of the matrix)
+* `"uppersymmband"`: a symmetric band-matrix by storing only the upper-band 
+   (2-D only, optional `param1` defines the number of super-diagonals of the matrix)
+* `"lowersymmband"`: a symmetric band-matrix by storing only the lower-band 
+   (2-D only, optional `param1` defines the number of sub-diagonals of the matrix)
+* `"band"`: a band matrix (2-D only, optionally, if only `param1` presents, it defines 
+    both the upper and lower bandwidths while  if both `param1` and `param2` are given,
+    they define the numbers of super-diagonals and sub-diagonals, respectively)
+
+The [LAPACK-styled band-matrix storage method](https://www.netlib.org/lapack/lug/node124.html) 
+is used here. In other words, for the superdiagonal band (the band above the diagonal), 
+the band data are converted into a 2-D matrix with one diagonal line per row 
+(front-padding arbitrary values if the element is outside of the matrix); a 
+sub-diagonal band is converted to a 2-D matrix with one diagonal per row 
+(rear-padding zeros if the element is outside of the matrix).
+
+For example, the below band matrix has 2 super-diagonals, and 1 sub-diagonal, 
+and 1 diagonal (thus, a total bandwidth of 2+1+1=4)
+
+```
+    a11 a12 a13  0   0   0
+    a21 a22 a23 a24  0   0
+     0  a32 a33 a34 a35  0
+     0   0  a43 a44 a45 a46
+     0   0   0  a54 a55 a56
+     0   0   0   0  a65 a66
+```
+the above matrix can be stored as
+
+```
+ {
+   ...
+   "_ArraySize_": [6, 6],
+   "_ArrayShape_": ["band", 2, 1],
+   "_ArrayData_": [
+      [0   0   a13 a24 a35 a46],
+      [0   a12 a23 a34 a45 a56],
+      [a11 a22 a33 a44 a55 a66],
+      [a21 a32 a43 a54 a65  0 ]
+   ]
+ }
+```
+
+where the "0" entries are elements outside of the matrix and can have an arbitrary 
+value. The dimensions of the `"_ArrayData_"` (as a 2-D array) are
+`(total bandwidth)`-by-`(maximum array dimension)`, where 
+   * `total bandwidth` = `param1`+ `param2` + 1
+   * `maximum array dimension` = the largest number in the `"_ArraySize_"` vector
+
+Moreover, Toeplitz matrices are supported via the below `"shapeid"` value:
+
+* `"toeplitz"`: a Toeplitz matrix by storing only the first row and column 
+   (padding zeros to have the same length); if the optional `param1` is present , it
+   shall denote `max(#super-diagonals+1, #sub-diagonal+1)`
+
+For example, the below non-square (5-by-6) Toeplitz matrix with 3 effective values
+in the row `[a11 a12 a13]` and 2 effective values in the column `[a11 a21]`
+```
+    a11 a12 a13  0   0   0
+    a21 a11 a12 a13  0   0
+     0  a21 a11 a12 a13  0
+     0   0  a21 a11 a12 a13
+     0   0   0  a21 a11 a12
+```
+shall be stored as
+```
+ {
+   ...
+   "_ArraySize_": [5, 6],
+   "_ArrayShape_": ["toeplitz", 3],
+   "_ArrayData_": [
+      [a11, a12, a13],
+      [a11, a21, 0]
+   ]
+ }
+```
+Notice that the first element of the row and the column vectors must be identical. The 2nd vector
+in `"_ArrayData_"` is padded in the rear to match the length of the first vector, keeping
+`"_ArrayData_"` in a rectangular shape.
+
+The `param1` in the above example is optional, similar to in the band-matrix
+cases. If it is not included, the parser shall read the first sub-vector in 
+`"_ArrayData_"` to determine the effective element number.
+
+##### Complex-valued special matrices
+
+The `"_ArrayShape_"` descriptor can be used with `"_ArrayIsComplex":true` to store 
+complex-valued special matrices. In such cases, the datastored in `"_ArrayData_"` 
+shall add an extra left-most dimension (must be 2), and store the real and imaginary 
+parts of the effective elements in the 1st and 2nd sub-matrices (of matching size), 
+respectively.
+
+For example, a complex-valued Toeplitz matrix of the same shape shall be stored as
+```
+ {
+   ...
+   "_ArraySize_": [5, 6],
+   "_ArrayIsComplex_": true,
+   "_ArrayShape_": ["toeplitz", 3],
+   "_ArrayData_": [
+      [
+          [r11, r12, r13],
+          [r11, r21, 0]
+      ],
+      [
+          [i11, i12, i13],
+          [i11, i21, 0]
+      ]
+   ]
+ }
+```
+where `r` and `i` values denote the real and imaginary parts of the effective values
+in the Toeplitz matrix.
+
+In addition, when `"_ArrayIsComplex":true` is present, the `"_ArrayShape_"` `"shapeid"`
+can take the below additional values to represent "Hermitian matrices"
+
+* `"upperherm"` (similar to `"uppersymm"`)
+* `"lowerherm"` (similar to `"lowersymm"`)
+* `"upperhermband"` (similar to `"uppersymmband"`)
+* `"lowerhermband"` (similar to `"lowersymmband"`)
+
+where the mirrored elements across the diagonal shall have opposite signs for the 
+imaginary parts when decoding the array.
+
+
 ##### Compressed array storage format
 
-JData supports node-based data compression to enhance space-efficiency of the generated
-files. Compressed data format is only supported in the annotated array storage format.
+JData supports node-based data compression to enhance the space-efficiency of generated
+files. The compressed data format is only supported in the annotated array storage format.
+
+For all array types supported in this specification, we want to point out that the 
+encoded data stored in the `"_ArrayData_"` container is always rectangular (1-D, 2-D, 
+or 3-D) in shape. This allows us to efficiently store and parse the data payload and
+apply compression. We refer to the data stored in `"_ArrayData_"` as the 
+**"pre-processed" array**.
 
 Four additional nodes are added to the annotated array structure
 
 * **`_ArrayZipType_`**: (required) a string-valued leaflet to store the compression 
   method, for example, "zlib", "gzip" or "lzma"
-* **`_ArrayZipSize_`**: (required) the dimensions of the pre-processed array, i.e. the data
+* **`_ArrayZipSize_`**: (required) the dimensions of the **pre-processed array**, i.e. the data
   originally stored in `_ArrayData_` in the format specified by `"_ArrayType_"`, 
-  before the array binary stream type-casted to byte stream and compression.
+  before the array binary stream is type-casted to byte stream and compressed.
 * **`_ArrayZipData_`**: (required) in addition, the `"_ArrayData_"` node is replaced by 
   `"_ArrayZipData_"`. In the case of JSON-formatted JData files, 
   `"_ArrayZipData_"` has a string value storing the "Base64" encoded compressed 
@@ -728,7 +908,7 @@ Four additional nodes are added to the annotated array structure
 In addition, the following optional parameters may also be used
 
 * **`_ArrayZipEndian_`**: (optional) a case-insensitive string, either "little" or "big",
-  indicating the endianness of the byte-stream before compression; if missing, assume
+  indicating the endianness of the byte-stream before compression; if missing, assumed
   to be "little"
 * **`_ArrayZipLevel_`**: (optional) a numerical value, typically an integer between
   0 and 9, specifying the level of the compression (interpretation is method/library-dependent)
@@ -738,6 +918,7 @@ In addition, the following optional parameters may also be used
 When a compressed array format is used, `"_ArrayZipType_"` and 
 `"_ArrayZipSize_"` must appear before `"_ArrayZipData_"`.
 
+`"_ArrayZipData_"` and `"_ArrayData_"` can not appear under the same parent node.
 
 #### Associative arrays or maps
 
@@ -789,7 +970,7 @@ Such data can also be stored in JSON/UBJSON using 3 dedicated keywords
      can be empty if no name or types are associated with the rows
 * **`"_TableRecords_"`**: a 2-D array storing each entry in the 2-D table.
 
-For example, the above table can be serailized using the below format
+For example, the above table can be serialized using the below format
 ```
     {
         "_TableCols_": ["Name", "Age", "Degree", "Height"],
@@ -849,12 +1030,12 @@ with each of the rows or columns.
    }
 ```
 
-The choice of the forms is user-dependent. Typically, the "structure of arrays" form 
+The choice of forms is user-dependent. Typically, the "structure of arrays" form 
 leads to a smaller file size.
 
 The above JData table can be enclosed inside an optional field `"_TableData_(table_name)":{...}` 
 (if inside a structure) or `{"_TableData_":{...}}` (if inside an array) to inform the 
-parser the start of the data structure.
+parser about the start of the data structure.
 
 
 #### Trees
@@ -904,11 +1085,11 @@ can be represented by the below JSON structure
      ]
   }
 ```
-and the corresponding UBJSON equivalents. The notations "data0", "data1" etc are parsed
-node data in JData format according to the rules defined in this section, depending on
+and the corresponding UBJSON equivalents. The notations "data0", "data1", etc. are parsed
+node data in JData format according to the rules defined in this section and depend on
 the type of the data.
 
-One can add either inline or dedicated metadata record to store additional information
+One can add either inline or dedicated metadata records to store additional information
 about the tree nodes, for example
 ```
   {
@@ -927,19 +1108,19 @@ about the tree nodes, for example
   }
 ```
 Auxiliary data can be inserted to different levels of the above JData tree document
-as named nodes, as long as the name of the auxiliary node does not conflict with
+as named nodes as long as the name of the auxiliary node does not conflict with
 the `"_TreeNode_(name)"` and `"_TreeChildren_"` of the same level. Behaviors for parsing 
 the auxiliary data are application dependent.
 
 The above JData tree can be enclosed inside an optional field `"_TreeData_(tree_name)":{...}` 
 (if inside a structure) or `{"_TreeData_":{...}}` (if inside an array) to inform the 
-parser the start of the data structure.
+parser of the start of the data structure.
 
 
 
 #### Singly and doubly linked lists
 
-Similar to the storage of trees, in JData, we use additional keywords to encapsulate a singly 
+Similar to the storage of trees, we use additional keywords to encapsulate a singly 
 or doubly linked list inside a JSON/UBJSON array construct. The relevant keywords are
 
 `"_ListNode_(unique_name)": node_data`
@@ -983,8 +1164,8 @@ The name label referred in the `"_LinkNext_"` or `"_LinkPrior_"` fields has a sc
 the current list, i.e. the parent array one-level above the node. Multiple linked lists can 
 share the same names if they are stored in a parallel or nested fashion.
 
-The above linked list can be enclosed inside an optional field `"_LinkedList_(list_name)":[...]` 
-(if inside a structure) or `{"_LinkedList_":[...]}` (if inside an array) to inform the parser 
+The above linked list can be enclosed inside an optional field, `"_LinkedList_(list_name)":[...]` 
+(if inside a structure) or `{"_LinkedList_":[...]}` (if inside an array), to inform the parser of 
 the start of the data structure.
 
 
@@ -1030,17 +1211,17 @@ structure supported in this document. If the edge data is a scalar, it can be in
 weights in a weighted graph.
 
 By default, the graph is assumed to be a directed graph. If a user intends to store undirected 
-graph using the above format, one must use `"_GraphEdges_(false)"` or `"_GraphEdges_(0)"` to 
+graphs using the above format, one must use `"_GraphEdges_(false)"` or `"_GraphEdges_(0)"` to 
 enclose the edge data.
 
-The above graph data can be enclosed inside an optional field `"_GraphData_(graph_name)":{...}` 
-(if inside a structure) or `{"_GraphData_":{...}}` (if inside an array) to inform the parser the 
+The above graph data can be enclosed inside an optional field, `"_GraphData_(graph_name)":{...}` 
+(if inside a structure) or `{"_GraphData_":{...}}` (if inside an array), to inform the parser of the 
 start of the data structure.
 
 When no data or metadata are associated with the edges, one can also use the graph's adjacency 
 matrix to represent the connections between graph nodes. The adjacency matrix must only have 0 
 and 1 values, with a 1 at A(i,j) indicating a directed edge from the i-th node in the 
-`_GraphNode_` list to the j-th node in that list, and 0 indicating no connection.
+`_GraphNode_` list to the j-th node in that list and a 0 indicating no connection.
 
 For example, the adjacency matrix of the above graph can be written as
 ```
@@ -1052,7 +1233,7 @@ For example, the adjacency matrix of the above graph can be written as
 ```
 In this case, instead of using `_GraphEdges_`, we use `_GraphMatrix_` to store the
 adjacency matrix using the N-D array syntax above. For example, for the same graph, 
-we can write this matrix using direct form
+we can write this matrix using the direct form
 
 ```
     {
@@ -1106,7 +1287,7 @@ here the `"_ArrayZipData_"` stores the row-major-serialized, byte-typecasted,
 zlib-compressed and finally base64-encoded adjacency matrix.
 
 In addition, a weighted graph can also be stored using the adjacency matrix by replacing
-the "1"s in the matrix by the weight value (a numerical scalar).
+the "1"s in the matrix by the weight values (a numerical scalar).
 
 
 #### Generic byte-stream data
@@ -1121,7 +1302,7 @@ valued byte-stream `"JData specification"` shall be stored as
 `"_ByteStream_":"SkRhdGEgc3BlY2lmaWNhdGlvbg=="`
 
 In the binary JData, a byte-stream shall be encoded using a similar `"name":value` pair where the 
-`value` is reprented by an `[H]` marker. As specified in the 
+`value` is represented by an `[H]` marker. As specified in the 
 [UBJSON Specification (Draft 12)](http://ubjson.org/type-reference/value-types/#numeric-gt-64bit), 
 the `[H]` marker is immediately followed by the length of the byte stream, then followed by 
 the raw binary values of the byte-stream **without Base64 encoding**. The same example above 
@@ -1131,9 +1312,9 @@ can be stored as
 
 The parsing and interpretation of the byte-stream data are application dependent. This is the most 
 generic form of data storage but contains the least data semantic information. One can use this 
-construct as containers to binary files, data segments, or encrypted data or files. In the case 
+construct as a container to binary files, data segments, or encrypted data or files. In the case 
 of data encryption, additional information related to the encryption and decryption, if needed, 
-shall be stored as the metadata to the `"_ByteStream_"` object with a format specified in the 
+shall be stored as metadata to the `"_ByteStream_"` object with a format specified in the 
 [Metadata section](#metadata).
 
 
@@ -1152,7 +1333,7 @@ and processing JData files
 
 ### Index vector
 
-Essentially, JData stores a serialized version of the complex data using collections 
+Essentially, JData stores a serialized version of complex data using collections 
 of sequential or nested nodes, either in the named or indexed form. To access
 any element (a leaflet, leaf or branch) of the JData document, one should use a vector 
 of indices that points to the specific node. 
@@ -1194,17 +1375,17 @@ has a length longer than the depth of the assessed node. In this case, the first
 from left to right of the indexing vector is considered the termination flag of the index.
 In other words, index vectors `[2,2]`, `[2,2,0]` and `[2,2,0,0]` are equivalent. 
 
-The third parameter, `is_compact` is a boolean flag. If set to `true`, `JD_GetNode` 
+The third parameter, `is_compact`, is a boolean flag. If set to `true`, `JD_GetNode` 
 shall skip the index if any of the dimensions along the indexing vector is a singlet, 
 i.e. the child count is 1. The compact indexing vector, enclosed by double-square-brackets 
 as `[[...]]`, shall be passed to `JD_GetNode` as the 2nd input when `is_compact` is `true`.
 Using the above example, both index vectors [[2,3]] and [2,3,1] refer to 
 `"_TreeNode_(node3)": data3`. Please be aware that the compact indexing vector can not
-distinguish between row and column vectors, as the column vector in JData has a trailing 
+distinguish between row and column vectors as the column vector in JData has a trailing 
 singlet dimension ([see N-D array section](#direct-storage-of-n-d-arrays)).
 
-An optional alternative indexing vector definition allows to replace the index within a 
-structure by a corresponding string, can be the name of the data item or a hashed version. 
+An optional alternative indexing vector definition allows the replacement of the index within a 
+structure by a corresponding string, which can be the name of the data item or a hashed version of it. 
 For example, the item `{"_TreeNode_(node2.1): data2.1}` in the above may also be accessed 
 via `["_TreeChildren_",2,"_TreeChildren_",1]`. This alternative indexing scheme is less 
 sensitive to data serialization orders, but requires the parser to handle both string
@@ -1213,7 +1394,7 @@ and integer inputs.
 
 ### Data query
 
-For each JData item identified via an indexing vector, a JData-compliant library must be able 
+For each JData item identified via an indexing vector, a JData-compliant library must be able to
 retrieve the `"name"` and `"data"` properties of the object via the below pseudo-code interface 
 ```
     string   name=JD_GetName(JDataNode item)
@@ -1234,33 +1415,33 @@ The type must be able to distinguish the below 3 basic types
 2. a structure, 
 3. an array
 
-Combining with the `JD_GetName`, one can also query if the element is a named one or indexed one.
+Combined with the `JD_GetName`, one can also query if the element is a named or indexed one.
 
-Additionally, JData-compliant library must provide the below interface to obtain the count of
-the childrens for each data item. A leaflet, an empty structure or an empty array should return
+Additionally, a JData-compliant library must provide the below interface to obtain the count of
+the children for each data item. A leaflet, an empty structure or an empty array should return
 a length of 0.
 ```
     integer length   = JD_GetLength(JD_Node item)
 ```
 
 
-Conversions Between JData Files
+Converting Between JData Files
 ---------------------------------
 
 One can choose either the text or binary format to save the raw data into
-a JData file, with the former following the JSON storage requirements and the 
-latter following the UBJSON storage requirements. This specification permits
+a JData file, with the former following JSON storage requirements and the 
+latter following UBJSON storage requirements. This specification permits
 both lossless and lossy conversions between the raw data to JSON, raw data to 
-UBJSON, and between JSON and UBJSON files. 
+UBJSON, and JSON and UBJSON files. 
 
 * **lossless conversion**: the input data are preserved after a save-load 
   round-trip conversion to and from one of the JData formats; type-casting 
   from low precision to high precision types is permitted
 * **lossy conversion**: the input data may lose precision during the 
   save-load round-trip conversion but the loss of precision shall be limited
-  to the level that is tolerable by the application.
+  to a level that is tolerable by the application.
 
-For best practices, use of lossless conversion is highly recommended. Here are 
+For best practices, the use of lossless conversion is highly recommended. Here are 
 some general recommendations to best preserve data precision:
 
 * Use binary-based JData to retain data type and binary information
@@ -1268,15 +1449,15 @@ some general recommendations to best preserve data precision:
   floating-point numerical data (typically 7 for single-precision and 17 for 
   double-precision values) to retain the full precision
 * When saving numerical arrays to text-based JData, consider using annotated 
-  array storage format, either with or without data compression to store 
+  array storage format, either with or without data compression, to store 
   binary type information
 * When parsing numerical arrays stored in the direct storage format in text-based
   JSON, one should consider using double-precision as the read-buffer to avoid
   truncation of input data and loss of precision.
 
-In addition, if a transformation to the data does not alter the (full or compact) 
-indexing vector to all leaflets in a JData document, it is referred to as an 
-**"isometric transform"**, and is permitted. An example of an isometric transform 
+In addition, if a transformation of the data does not alter the (full or compact) 
+indexing vector of all leaflets in a JData document, it is referred to as an 
+**"isometric transform"** and is permitted. An example of an isometric transform 
 is the conversion from a structure to an array as shown in the below example:
 ```
    {
@@ -1312,7 +1493,7 @@ N-D array to an annotated N-D array.
 Data Referencing and Links
 ---------------------------------
 
-JData files support referencing and internal/external linking via the definitions of
+JData files support referencing and internal/external linking via the definition of
 data links and anchors. 
 
 A link is defined by a named leaflet or leaf as shown in the below two styles
@@ -1329,7 +1510,7 @@ A link is defined by a named leaflet or leaf as shown in the below two styles
    }
 ```
 The `"path"` string specifies the Uniform Resource Identifier (URI) of the referenced 
-JData data document, using a format compliant to the [RFC3986] specification, followed 
+JData data document using a format compliant to the [RFC3986] specification, followed 
 by the indexing vector string to point to a specific element of the referenced document. 
 For example, the below link
 ```
@@ -1389,7 +1570,7 @@ Recommended File Specifiers
 ------------------------------
 
 For the text-based JData file, the recommended file suffix is **`".jdat"`**; for 
-the binary JData file, the recommended file suffix is **`".ubjd"`**.
+the binary JData file, the recommended file suffix is **`".jbat"`**.
 
 The MIME type for the text-based JData document is 
 **`"application/jdata-text"`**; that for the binary JData document is 
@@ -1399,21 +1580,22 @@ The MIME type for the text-based JData document is
 Summary
 ----------
 
-The major attractions of JSON and UBJSON are their simplicity and portability, which
+The main appeals of JSON and UBJSON are their simplicity and portability, which
 are often missing from other alternatives. In this document, we aim to extend the ability
-of JSON/UBJSON in storage and interchange complex data structures without needing to 
+of JSON/UBJSON to store and interchange complex data structures without needing to 
 modify the language syntax, making the generated JData files readily usable for most 
 existing JSON/UBJSON encoders and decoders.
 
 Specifically, we defined JSON/UBJSON-based constructs to store N-D arrays, tables, trees,
-linked lists, and graphs, and added the ability to associate metadata to any elements
-of the JData document. In addition, we also define a set of core library interfaces to 
+linked lists, and graphs, and added the ability to associate metadata to any element
+of the JData document. In addition, we also defined a set of core library interfaces to 
 query and access the values and properties of the data units stored in a JData document.
 To enhance space-efficiency and flexibility, we also introduced array data compression 
 and data linking/referencing mechanisms. 
 
-Although JData does not have all the sophisticated features as other advanced binary 
-data exchange formats, such as HDF5, it is well suited for storage of small to medium
+Although JData does not have all the sophisticated features of other advanced binary 
+data exchange formats, such as HDF5, it is well suited for the storage of small to medium
 sized datasets generated in many scientific domains or IT applications. Combined with 
 the excellent availability of parsers and web-friendliness, JData is expected to be 
-easily adopted and extended in the future.
+easily adoptable and extended in the future.
+

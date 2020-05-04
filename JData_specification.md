@@ -583,7 +583,7 @@ In the annotated array storage format, one shall use a structure to store an N-D
 allows one to use additional fields to store additional information regarding the encoded 
 array.
 
-The annotated array format is shown below for a solid 2x3 array `a=[[1,2],[3,4],[5,6]]`
+The annotated array format is shown below for a solid 3x2 array `a=[[1,2],[3,4],[5,6]]`
 ```
    {
        "_ArrayType_": "typename",
@@ -1323,6 +1323,27 @@ of data encryption, additional information related to the encryption and decrypt
 shall be stored as metadata to the `"_ByteStream_"` object with a format specified in the 
 [Metadata section](#metadata).
 
+An example `_ByteStream_` record that includes additional information in the metadata section is
+shown below:
+
+```
+"_ByteStream_":{
+       "_DataInfo_":
+           "MediaType": "text/plain",
+           "Encoding": ["zlib","base64"],
+           "ByteLength": 1250,
+       },
+       "Data": "..."
+}
+```
+where `MediaType` specifies the **original** data MIME type - in a format compatible to those 
+used in common Internet standards (such as *RFC2045*, *RFC2046* etc), additional
+encoding steps (specified by `"Encoding"`), in the order or processing, that converts the 
+original data to the byte stream stored in the `"Data"` subfield, data length etc. 
+For example, in the above `_ByteStream_` object, the `"Data"` subfield stores a plain-text 
+object, by first apply a zlib-based compression to the text stream, and then apply "base64"
+encoding. The total converted "Data" byte length is 1250-byte, as shown in `ByteLength`.
+
 
 Indexing and Accessing JData
 ------------------------------
@@ -1575,8 +1596,8 @@ behaviors of other types of data link values are not specified.
 Recommended File Specifiers
 ------------------------------
 
-For the text-based JData file, the recommended file suffix is **`".jdat"`**; for 
-the binary JData file, the recommended file suffix is **`".jbat"`**.
+For the text-based JData file, the recommended file suffix is **`".jdt"`**; for 
+the binary JData file, the recommended file suffix is **`".jdb"`**.
 
 The MIME type for the text-based JData document is 
 **`"application/jdata-text"`**; that for the binary JData document is 

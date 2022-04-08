@@ -4,7 +4,7 @@ JData: A general-purpose data annotation and interchange format
 - **Status of this document**: This document is currently under development.
 - **Copyright**: (C) Qianqian Fang (2011, 2015, 2019) <q.fang at neu.edu>
 - **License**: Apache License, Version 2.0
-- **Version**: 0.9 (Draft 3.preview)
+- **Format Version**: 1 (Draft 3.preview)
 - **Abstract**:
 
 > JData is a general-purpose data interchange format aimed for portability,
@@ -26,8 +26,8 @@ scalability of the generated data files.
 
 - [Introduction](#introduction)
     * [Background](#background)
-    * [JSON and UBJSON](#json-and-ubjson)
-    * [JData specification overview](#jdata-specification-summary)
+    * [JSON and Binarh JData](#json-and-binary-jdata)
+    * [JData specification overview](#jdata-specification-overview)
 - [Grammar](#grammar)
     * [Text-based JData storage grammar](#text-based-jdata-storage-grammar)
     * [Binary JData storage grammar](#binary-jdata-storage-grammar)
@@ -177,6 +177,15 @@ specification and a binary format derived from the UBJSON specification. JData
 is designed to represent commonly used data structures, including arrays, 
 structures, trees and graphs. A round-trip conversion is defined between the 
 text and binary versions of JData documents.
+
+The inception of this specification started in 2011 as part of the development
+of the [JSONLab Toolbox](http://iso2mesh.sourceforge.net/jsonlab/) - a popular 
+open-source MATLAB/GNU Octave JSON reader/writer. The majority of the 
+[annotated N-D array constructs](#annotated-storage-of-n-d-arrays) had been implemented
+in the [early releases](https://sourceforge.net/projects/iso2mesh/files/jsonlab/) 
+of JSONLab. In 2015, the initial draft of this specification
+was [developed in the Iso2Mesh Wiki](http://iso2mesh.sourceforge.net/cgi-bin/index.cgi?action=history&id=jsonlab/Doc/JData);
+since 2019, the development has been migrated to Github.
 
 The purpose of this document is to define the text and binary JData format 
 specifications. This is achieved through defining a semantic layer 
@@ -648,6 +657,14 @@ The supported data types are similar to those supported by the [BJData/UBJSON fo
 The first 8 data types are considered "integer" types, and the last three types are considered 
 "floating-point" types.
 
+In addition, the below two data types can be used as aliases to the `uint8` type in an annotated array format:
+
+* **char**: character arrays (8-bit)
+* **logical**: logical arrays (8-bit)
+
+If the above two aliases are used, a parser may optionally convert the enclosed 
+`uint8` data to character or logical arrays (1-byte).
+
 
 ##### Complex-valued arrays
 
@@ -754,7 +771,7 @@ Here, the `"shapeid"` tag is a case-insensitive string specifying the type of th
 special matrix. The currently supported `"shapeid"` values include
 
 * `"diag"`: a diagonal matrix, can be a non-square matrix (optional `param1` 
-  defines the length of the diagonal elements, must be less than the smallest 
+  defines the length of the diagonal elements, must not be more than the smallest 
   value in the `_ArraySize_` vector)
 * `"upper"`: an upper triangular (square) matrix (2-D only)
 * `"lower"`: a lower triangular (square) matrix (2-D only)
